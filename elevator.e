@@ -131,6 +131,8 @@ feature -- Methods
 		end
 
 	moveToDn(fl: INTEGER)
+		note
+			explicit: wrapping
 		require
 			modify_model(["currentfloor"], Current)
 			validMove: movDn
@@ -155,6 +157,8 @@ feature -- Methods
 		end
 
 	moveToUp(fl: INTEGER)
+		note
+			explicit: wrapping
 		require
 			modify_model(["currentfloor"], Current)
 			validMove: movUp
