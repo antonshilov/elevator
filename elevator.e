@@ -64,11 +64,33 @@ feature -- Methods
 		require
 			modify_model(["currentfloor"], Current)
 			validFl:	currentFloor > minFloor
-			not doorOpen
+			closed: not doorOpen
 		do
 			currentFloor:= currentFloor-1
 		ensure
-			currentFloor = old currentFloor-1
+			moved: currentFloor = old currentFloor-1
+		end
+	setMovUp(state: BOOLEAN)
+		require
+			modify_model("movup",Current)
+			not movDn
+			state implies not doorOpen
+		do
+			movUp:=state
+		ensure
+			movUp=state
+			movUp implies not doorOpen
+		end
+	setMovDn(state: BOOLEAN)
+		require
+			modify_model("movdn",Current)
+			not movUp
+			state implies not doorOpen
+		do
+			movDn:=state
+		ensure
+			movDn=state
+			movDn implies not doorOpen
 		end
 
 	cabBtn(fl: INTEGER)
@@ -102,7 +124,7 @@ feature -- Methods
 	open()
 		require
 			modify_model(["dooropen","cabbtns", "floorupbtns", "floordnbtns"], Current)
-			validMove: not (movUp or movDn)
+			validMove: not movUp and not movDn
 			reachedDest: cabBtns[currentFloor] or floorUpBtns[currentFloor] or floorDnBtns[currentFloor]
 			doorClosed:	not doorOpen
 		do
@@ -128,21 +150,26 @@ feature -- Methods
 		end
 
 	moveTo(fl: INTEGER)
+		note
+			explicit: wrapping
 		require
 			modify_model(["movup", "movdn","currentfloor","dooropen", "cabbtns", "floorupbtns", "floordnbtns"], Current)
 			validMove: not (movUp or movDn)
 			validDest: not (currentFloor = fl) and (fl >= minFloor) and (fl <= maxFloor)
+			validFlBtns: floorUpBtns.max <= maxFloor and floorUpBtns.min >= minFloor
+			validFlDnBtns: floorDnBtns.max <= maxFloor and floorDnBtns.min >= minFloor
+			validCabBtns: cabBtns.max <= maxFloor and cabBtns.min >= minFloor
 			hasDest: cabBtns[fl]
 			doorClosed: not doorOpen
 		do
 			if currentFloor > fl then
-				movDn:=TRUE
+				setMovDn(TRUE)
 				moveToDn(fl)
-				movDn:=FALSE
+				setMovDn(FALSE)
 			else
-				movUp:=TRUE
+				setMovUp(TRUE)
 				moveToUp(fl)
-				movUp:=FALSE
+				setMovUp(FALSE)
 			end
 			open()
 			close()
@@ -161,6 +188,7 @@ feature -- Methods
 			validMove: movDn
 			validDest: not (currentFloor = fl) and (fl >= minFloor) and (fl <= maxFloor) and (currentFloor > fl)
 			hasDest: cabBtns[fl]
+			validFlDnBtns: floorDnBtns.max <= maxFloor and floorDnBtns.min >= minFloor
 			doorClosed: not doorOpen
 		do
 			from
@@ -173,10 +201,10 @@ feature -- Methods
 			loop
 				moveDown()
 				if (floorDnBtns.has(currentFloor)) then
-					movDn:=FALSE
+					setMovDn(FALSE)
 					open()
 					close()
-					movDn:=TRUE
+					setMovDn(TRUE)
 				end
 			variant
 				currentFloor - fl
@@ -184,6 +212,7 @@ feature -- Methods
 		ensure
 			currentFloor = fl
 			reachedDest: cabBtns[currentFloor]
+			not doorOpen
 		end
 
 	moveToUp(fl: INTEGER)
@@ -194,6 +223,7 @@ feature -- Methods
 			validMove: movUp
 			validDest: not (currentFloor = fl) and (fl >= minFloor) and (fl <= maxFloor) and (currentFloor < fl)
 			hasDest: cabBtns[fl]
+			validFlBtns: floorUpBtns.max <= maxFloor and floorUpBtns.min >= minFloor
 			doorClosed: not doorOpen
 		do
 			from
@@ -206,10 +236,10 @@ feature -- Methods
 			loop
 				moveUp()
 				if (floorUpBtns.has(currentFloor)) then
-					movUp:=FALSE
+					setMovUp(FALSE)
 					open()
 					close()
-					movUp:=TRUE
+					setMovUp(TRUE)
 				end
 			variant
 				fl - currentFloor
@@ -217,6 +247,7 @@ feature -- Methods
 		ensure
 			currentFloor = fl
 			reachedDest: cabBtns[currentFloor]
+			not doorOpen
 		end
 
 feature -- Status report
@@ -252,7 +283,7 @@ invariant
 	maxFloor > minFloor
 	maxFloor >= currentFloor and currentFloor >= minFloor
 	minFloor >=0
-	movUp implies not movDn
-	movDn implies not movUp
-	movUp or movDn implies not doorOpen
+	notUpIfDn: movUp implies not movDn
+	notDnIfUp: movDn implies not movUp
+	closedWhenMoving: movUp or movDn implies not doorOpen
 end
