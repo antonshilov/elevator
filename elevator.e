@@ -4,7 +4,7 @@ note
 	date: "21 July"
 	revision: "1"
 		-- visible fields
-	model: doorOpen, maxFloor, minFloor, currentFloor, movUp, movDn, cabBtns
+	model: doorOpen, maxFloor, minFloor, currentFloor, movUp, movDn, cabBtns, floorUpBtns, floorDnBtns
 
 class
 	ELEVATOR
@@ -46,7 +46,7 @@ feature -- Access
 	doorOpen, movUp, movDn: BOOLEAN;
 
 	maxFloor, 	minFloor, 	currentFloor: INTEGER;
-	cabBtns: MML_SET[INTEGER];
+	cabBtns, floorUpBtns, floorDnBtns: MML_SET[INTEGER];
 
 feature -- Methods
 	moveUp()
@@ -80,17 +80,40 @@ feature -- Methods
 		ensure
 			cabBtns = old cabBtns & fl
 		end
+
+	pushUp(fl: INTEGER)
+		require
+			modify_model(["floorupbtns"], Current)
+			validFl:	fl >= minFloor and fl<=maxFloor and not (fl = currentFloor)
+		do
+			floorUpBtns:= floorUpBtns & fl
+		ensure
+			floorUpBtns = old floorUpBtns & fl
+		end
+	pushDn(fl: INTEGER)
+		require
+			modify_model(["floordnbtns"], Current)
+			validFl:	fl >= minFloor and fl<=maxFloor and not (fl = currentFloor)
+		do
+			floorDnBtns:= floorDnBtns & fl
+		ensure
+			floorDnBtns = old floorDnBtns & fl
+		end
 	open()
 		require
-			modify_model(["dooropen","cabbtns"], Current)
+			modify_model(["dooropen","cabbtns", "floorupbtns", "floordnbtns"], Current)
 			validMove: not (movUp or movDn)
-			reachedDest: cabBtns[currentFloor]
-			not doorOpen
+			reachedDest: cabBtns[currentFloor] or floorUpBtns[currentFloor] or floorDnBtns[currentFloor]
+			doorClosed:	not doorOpen
 		do
 			cabBtns:= cabBtns / currentFloor
+			floorUpBtns:= floorUpBtns / currentFloor
+			floorDnBtns:= floorDnBtns / currentFloor
 			doorOpen:= TRUE
 		ensure
 			cabBtns = old cabBtns / currentFloor
+			floorUpBtns = old floorUpBtns / currentFloor
+			floorDnBtns = old floorDnBtns / currentFloor
 			doorOpen
 		end
 	close()
@@ -106,7 +129,7 @@ feature -- Methods
 
 	moveTo(fl: INTEGER)
 		require
-			modify_model(["movup", "movdn","currentfloor","dooropen", "cabbtns"], Current)
+			modify_model(["movup", "movdn","currentfloor","dooropen", "cabbtns", "floorupbtns", "floordnbtns"], Current)
 			validMove: not (movUp or movDn)
 			validDest: not (currentFloor = fl) and (fl >= minFloor) and (fl <= maxFloor)
 			hasDest: cabBtns[fl]
@@ -134,7 +157,7 @@ feature -- Methods
 		note
 			explicit: wrapping
 		require
-			modify_model(["currentfloor"], Current)
+			modify_model(["currentfloor", "dooropen", "movdn", "floordnbtns"], Current)
 			validMove: movDn
 			validDest: not (currentFloor = fl) and (fl >= minFloor) and (fl <= maxFloor) and (currentFloor > fl)
 			hasDest: cabBtns[fl]
@@ -144,10 +167,17 @@ feature -- Methods
 
 			invariant
 				dest_less_current: fl<= currentFloor
+				doorClosed: not doorOpen
 			until
 				currentFloor = fl
 			loop
 				moveDown()
+				if (floorDnBtns.has(currentFloor)) then
+					movDn:=FALSE
+					open()
+					close()
+					movDn:=TRUE
+				end
 			variant
 				currentFloor - fl
 			end
@@ -160,7 +190,7 @@ feature -- Methods
 		note
 			explicit: wrapping
 		require
-			modify_model(["currentfloor"], Current)
+			modify_model(["currentfloor", "dooropen", "movup", "floorupbtns"], Current)
 			validMove: movUp
 			validDest: not (currentFloor = fl) and (fl >= minFloor) and (fl <= maxFloor) and (currentFloor < fl)
 			hasDest: cabBtns[fl]
@@ -170,10 +200,17 @@ feature -- Methods
 
 			invariant
 				dest_more_current: fl >= currentFloor
+				doorClosed: not doorOpen
 			until
 				currentFloor = fl
 			loop
 				moveUp()
+				if (floorUpBtns.has(currentFloor)) then
+					movUp:=FALSE
+					open()
+					close()
+					movUp:=TRUE
+				end
 			variant
 				fl - currentFloor
 			end
