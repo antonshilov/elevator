@@ -133,6 +133,7 @@ feature -- Methods
 			floorDnBtns:= floorDnBtns / currentFloor
 			doorOpen:= TRUE
 		ensure
+			removedDest: not cabBtns.has (currentFloor)
 			cabBtns = old cabBtns / currentFloor
 			floorUpBtns = old floorUpBtns / currentFloor
 			floorDnBtns = old floorDnBtns / currentFloor
@@ -171,10 +172,8 @@ feature -- Methods
 				moveToUp(fl)
 				setMovUp(FALSE)
 			end
-			open()
-			close()
+
 		ensure
-			removedDest: cabBtns = old cabBtns / currentFloor
 			reachedDest: currentFloor = fl
 			notMoving: not (movUp and movDn)
 			doorClosed:not doorOpen
@@ -184,7 +183,7 @@ feature -- Methods
 		note
 			explicit: wrapping
 		require
-			modify_model(["currentfloor", "dooropen", "movdn", "floordnbtns"], Current)
+			modify_model(["currentfloor", "dooropen", "movdn", "floordnbtns", "floorupbtns", "cabbtns"], Current)
 			validMove: movDn
 			validDest: not (currentFloor = fl) and (fl >= minFloor) and (fl <= maxFloor) and (currentFloor > fl)
 			hasDest: cabBtns[fl]
@@ -196,11 +195,12 @@ feature -- Methods
 			invariant
 				dest_less_current: fl<= currentFloor
 				doorClosed: not doorOpen
+				wrapped:	Current.is_wrapped
 			until
 				currentFloor = fl
 			loop
 				moveDown()
-				if (floorDnBtns.has(currentFloor)) then
+				if (floorDnBtns.has(currentFloor) or cabBtns.has (currentFloor)) then
 					setMovDn(FALSE)
 					open()
 					close()
@@ -211,7 +211,6 @@ feature -- Methods
 			end
 		ensure
 			currentFloor = fl
-			reachedDest: cabBtns[currentFloor]
 			not doorOpen
 		end
 
@@ -219,7 +218,7 @@ feature -- Methods
 		note
 			explicit: wrapping
 		require
-			modify_model(["currentfloor", "dooropen", "movup", "floorupbtns"], Current)
+			modify_model(["currentfloor", "dooropen", "movup", "floorupbtns", "floordnbtns", "cabbtns"], Current)
 			validMove: movUp
 			validDest: not (currentFloor = fl) and (fl >= minFloor) and (fl <= maxFloor) and (currentFloor < fl)
 			hasDest: cabBtns[fl]
@@ -231,6 +230,7 @@ feature -- Methods
 			invariant
 				dest_more_current: fl >= currentFloor
 				doorClosed: not doorOpen
+				wrapped:	Current.is_wrapped
 			until
 				currentFloor = fl
 			loop
@@ -246,37 +246,8 @@ feature -- Methods
 			end
 		ensure
 			currentFloor = fl
-			reachedDest: cabBtns[currentFloor]
 			not doorOpen
 		end
-
-feature -- Status report
-
-feature -- Status setting
-
-feature -- Cursor movement
-
-feature -- Element change
-
-feature -- Removal
-
-feature -- Resizing
-
-feature -- Transformation
-
-feature -- Conversion
-
-feature -- Duplication
-
-feature -- Miscellaneous
-
-feature -- Basic operations
-
-feature -- Obsolete
-
-feature -- Inapplicable
-
-feature {NONE} -- Implementation
 
 invariant
 	invariant_clause: True -- Your invariant here
